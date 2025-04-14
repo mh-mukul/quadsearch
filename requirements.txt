@@ -1,0 +1,11 @@
+alembic
+cryptography
+fastapi
+passlib
+PyJWT
+PyMySQL
+python-dotenv
+requests
+sentence-transformers
+SQLAlchemy
+uvicorn
