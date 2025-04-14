@@ -9,9 +9,12 @@ from utils.qdrant_store import QdrantStore
 from utils.extract_doc import prepare_documents_from_csv_stream
 from schemas.qdrant_store import CollectionCreatePayload, SearchPayload
 
+DATA_DIR = "data"
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+
 qdrant = QdrantStore()
 response = ResponseHelper()
-
 router = APIRouter(prefix="/qdrant", tags=["Qdrant Store"])
 
 
@@ -33,7 +36,8 @@ def collection_create(
 def document_add(
     request: Request,
     collection_name: str = Form(..., description="Name of the collection"),
-    vector_columns: str = Form(..., description="Comma-separated list of columns"),
+    vector_columns: str = Form(...,
+                               description="Comma-separated list of columns"),
     file: UploadFile = File(..., description="CSV file containing documents"),
     _: None = Depends(get_api_key),
 ):
@@ -43,7 +47,7 @@ def document_add(
     vector_columns = [col.strip() for col in vector_columns.split(",")]
 
     filename = uuid4().hex + ".csv"
-    file_path = f"data/{filename}"
+    file_path = f"{DATA_DIR}/{filename}"
     with open(file_path, "wb") as f:
         f.write(file.file.read())
 

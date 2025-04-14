@@ -1,9 +1,9 @@
 services:
   # FastAPI app service
-  fastapi_backend:
+  quadsearch-backend:
     build: .
-    container_name: fastapi_backend
-    image: fastapi_backend
+    container_name: quadsearch-backend
+    image: quadsearch-backend
     restart: always
     ports:
       - "${DOCKER_PORT:-8001}:8001"

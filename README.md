@@ -61,19 +61,7 @@ The following cli commands are available:
 
 ### Deployment
 
-The application can be deployed using Docker. To build the Docker image, run the following command:
-
-```bash
-docker build -t fast-api-base .
-```
-
-To run the Docker container, run the following command:
-
-```bash
-docker-compose up -d
-```
-
-Or you can build and run the Docker container in a single command:
+The application can be deployed using Docker. Run this following command to build the Docker image and start the container:
 
 ```bash
 docker-compose up -d --build
@@ -96,17 +84,17 @@ docker-compose logs -f
 To run the database migrations inside the Docker container, you can use the following command:
 
 ```bash
-docker-compose exec fastapi_backend alembic upgrade head
+docker-compose exec quadsearch-backend alembic upgrade head
 ```
 
 To run the CLI commands inside the Docker container, you can use the following command:
 
 ```bash
-docker-compose exec fastapi_backend python cli.py <command>
+docker-compose exec quadsearch-backend python cli.py <command>
 ```
 
 To browse files inside the Docker container, you can use the following command:
 
 ```bash
-docker-compose exec fastapi_backend bash
+docker-compose exec quadsearch-backend bash
 ```

@@ -8,11 +8,13 @@ load_dotenv()
 
 QADRANT_URL = os.getenv("QDRANT_URL")
 QADRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+
 client = QdrantClient(
     url=QADRANT_URL,
     api_key=QADRANT_API_KEY,
 )
-encoder = SentenceTransformer("all-MiniLM-L6-v2")
+encoder = SentenceTransformer(EMBEDDING_MODEL)
 
 
 class QdrantStore:
