@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 
-from handlers.custom_exceptions import APIKeyException
+from handlers.exception_handler import APIKeyException
 from handlers.exception_handler import (
     validation_exception_handler, general_exception_handler, api_key_exception_handler)
 
