@@ -36,9 +36,13 @@ def collection_create(
 def document_add(
     request: Request,
     collection_name: str = Form(..., description="Name of the collection"),
+    file: UploadFile = File(..., description="CSV file containing documents"),
     vector_columns: str = Form(...,
                                description="Comma-separated list of columns"),
-    file: UploadFile = File(..., description="CSV file containing documents"),
+    skip_empty: bool = Form(
+        False, description="If True, skip rows with empty values in the specified columns"),
+    batch_size: int = Form(
+        100, description="Number of documents to yield per batch"),
     _: None = Depends(get_api_key),
 ):
     if file.content_type not in ["text/csv"]:
@@ -53,7 +57,7 @@ def document_add(
 
     try:
         # Stream batches and upload to Qdrant
-        for batch in prepare_documents_from_csv_stream(file_path):
+        for batch in prepare_documents_from_csv_stream(file_path=file_path, skip_empty=skip_empty, batch_size=batch_size):
             qdrant.add_documents(
                 collection_name=collection_name,
                 documents=batch,
