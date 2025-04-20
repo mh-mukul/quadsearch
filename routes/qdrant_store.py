@@ -15,7 +15,7 @@ if not os.path.exists(DATA_DIR):
 
 qdrant = QdrantStore()
 response = ResponseHelper()
-router = APIRouter(prefix="/qdrant", tags=["Qdrant Store"])
+router = APIRouter(prefix="", tags=["Qdrant Store"])
 
 
 @router.post("/create_collection")

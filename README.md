@@ -1,14 +1,14 @@
-# FastAPI Base Application
+# QuadSearch - Semantic Search Engine
 
 ### Summary
 
-This is a base FastAPI application providing a foundation for building robust and scalable backend services. This application can be used as a starting point for developing various types of backend systems, including REST APIs and microservices.
+QuadSearch is a semantic search engine built using FastAPI, SQLAlchemy, and Qdrant. It provides a simple and efficient way to perform vector-based searches on large datasets. The application is designed to be easily extensible and customizable, allowing developers to build their own search applications on top of it.
 
 Key features:
 
 - Database integration with SQLAlchemy
 - Database migrations with Alembic
-- Command-line interface for managing the application
+- Vector search using Qdrant
 - Proper logging and error handling
 - API endpoint documentation with Swagger UI
 - Docker support for easy deployment
@@ -18,9 +18,10 @@ Technologies used:
 - FastAPI
 - SQLAlchemy
 - Alembic
+- Qdrant
 - Docker
 
-### Project Setup:
+### Project Setup
 
 - Create python virtual environment & activate it.
 - Install the requirements from requirements.txt by running `pip install -r requirements.txt`.
@@ -34,6 +35,27 @@ API Documentation Endpoints(Avaliable only in debug mode):
 
 - `/docs`: Swagger UI documentation for the API endpoints.
 - `/redoc`: ReDoc documentation for the API endpoints.
+
+### Qdrant Setup
+
+Qdrant is a vector search engine that can be used for semantic search. To use Qdrant with this application, you need to set up a Qdrant instance. You can either run Qdrant locally using Docker or use a managed Qdrant service.
+
+To run Qdrant locally using Docker, you can use these following commands:
+
+```bash
+docker pull qdrant/qdrant
+```
+
+```bash
+docker run -p 6333:6333 \
+    -v $(pwd)/path/to/data:/qdrant/storage \
+    qdrant/qdrant
+```
+
+This will start a Qdrant instance on port 6333. You can then configure the application to connect to this Qdrant instance by setting the `QDRANT_URL` environment variable in the `.env` file.
+You can access the Qdrant API at `http://localhost:6333` and the Qdrant UI at `http://localhost:6333/dashboard`.
+
+Please refer to the official [Qdrant documentation](https://qdrant.tech/documentation/guides/installation/#docker-compose) for more information.
 
 ### Database Setup
 
@@ -52,6 +74,14 @@ After configuring the database connection, you will need to run the database mig
 alembic upgrade head
 ```
 
+### API Endpoints
+
+The following API endpoints are available:
+
+- `/api/v1/create_collection` (POST): Creates a new index in the DB.
+- `/api/v1/add_document` (POST): Inserts document rows in a collection.
+- `/api/v1/search` (POST): Searches for documents in a collection.
+
 ### CLI Commands
 
 The following cli commands are available:
@@ -67,7 +97,7 @@ The application can be deployed using Docker. Run this following command to buil
 docker-compose up -d --build
 ```
 
-This will start the application in a detached mode. You can then access the application at `http://localhost:8001` or the port you specified by DOCKER_PORT in the .env file.
+This will start the application in a detached mode. You can then access the backend at `http://localhost:8001` or the port you specified by DOCKER_PORT in the .env file and Qdrant at `http://localhost:6333`.
 
 To stop the Docker container, run the following command:
 

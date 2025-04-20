@@ -5,6 +5,7 @@ passlib
 PyJWT
 PyMySQL
 python-dotenv
+qdrant-client
 requests
 sentence-transformers
 SQLAlchemy
