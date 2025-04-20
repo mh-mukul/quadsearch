@@ -93,7 +93,7 @@ def document_search(
                 "score": hit.score,
                 "payload": hit.payload,
             }
-            for hit in results
+            for hit in results.points
         ]
         return response.success_response(200, "Success", results)
     except Exception as e:

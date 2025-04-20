@@ -16,6 +16,30 @@ services:
       - custom-network
     command: uvicorn app:app --host 0.0.0.0 --port 8001 --worker 4 --timeout-keep-alive 60
 
+  # Qdrant service 
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: always
+    container_name: qdrant
+    ports:
+      - 6333:6333
+      - 6334:6334
+    expose:
+      - 6333
+      - 6334
+    configs:
+      - source: qdrant_config
+        target: /qdrant/config/production.yaml
+    volumes:
+      - ./qdrant_data:/qdrant/storage
+    networks:
+      - custom-network
+
+configs:
+  qdrant_config:
+    content: |
+      log_level: INFO
+
 networks:
   custom-network:
     driver: bridge

@@ -27,7 +27,7 @@ class QdrantStore:
         client.create_collection(
             collection_name=collection_name,
             vectors_config=models.VectorParams(
-                size=384,
+                size=384,   # Important: Ensure this matches the embedding model size that you use
                 distance=models.Distance.COSINE,
             ),
         )
@@ -64,9 +64,9 @@ class QdrantStore:
         :param limit: Number of results to return.
         :return: List of search results.
         """
-        hits = client.search(
+        hits = client.query_points(
             collection_name=collection_name,
-            query_vector=encoder.encode(query).tolist(),
+            query=encoder.encode(query).tolist(),
             limit=limit,
         )
         return hits
