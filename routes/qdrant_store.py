@@ -84,16 +84,17 @@ def document_search(
 
     try:
         results = qdrant.search_documents(
-            payload.collection_name, query, limit=payload.limit)
+            payload.collection_name, query, limit=payload.limit, rerank=payload.rerank)
         if not results:
             return response.error_response(404, "No results found.")
         results = [
             {
-                "id": hit.id,
-                "score": hit.score,
-                "payload": hit.payload,
+                # "score": hit.get("vector_score"),
+                # "rerank_score": hit.get("rerank_score"),
+                "content": hit["doc"]["content"],
+                "metadata": hit["doc"]["metadata"],
             }
-            for hit in results.points
+            for hit in results
         ]
         return response.success_response(200, "Success", results)
     except Exception as e:

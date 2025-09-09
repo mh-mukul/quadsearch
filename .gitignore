@@ -56,3 +56,4 @@ artifacts/
 logs/
 *.db
 data/
+.vscode/

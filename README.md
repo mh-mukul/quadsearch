@@ -2,13 +2,13 @@
 
 ### Summary
 
-QuadSearch is a semantic search engine built using FastAPI, SQLAlchemy, and Qdrant. It provides a simple and efficient way to perform vector-based searches on large datasets. The application is designed to be easily extensible and customizable, allowing developers to build their own search applications on top of it.
+QuadSearch is a semantic search engine built using FastAPI and Qdrant. It provides a simple and efficient way to perform vector-based searches on large datasets. The application is designed to be easily extensible and customizable, allowing developers to build their own search applications on top of it.
 
 Key features:
 
+- Vector search using Qdrant
 - Database integration with SQLAlchemy
 - Database migrations with Alembic
-- Vector search using Qdrant
 - Proper logging and error handling
 - API endpoint documentation with Swagger UI
 - Docker support for easy deployment
@@ -16,9 +16,9 @@ Key features:
 Technologies used:
 
 - FastAPI
+- Qdrant
 - SQLAlchemy
 - Alembic
-- Qdrant
 - Docker
 
 ### Project Setup

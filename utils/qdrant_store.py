@@ -1,20 +1,23 @@
 import os
 from uuid import uuid4
 from dotenv import load_dotenv
+from configs.logger import logger
 from qdrant_client import models, QdrantClient
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
 load_dotenv()
 
 QADRANT_URL = os.getenv("QDRANT_URL")
 QADRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+RERANKER_MODEL = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
 
 client = QdrantClient(
     url=QADRANT_URL,
     api_key=QADRANT_API_KEY,
 )
-encoder = SentenceTransformer(EMBEDDING_MODEL)
+encoder = SentenceTransformer(EMBEDDING_MODEL, trust_remote_code=True)
+reranker = CrossEncoder(RERANKER_MODEL)
 
 
 class QdrantStore:
@@ -27,7 +30,7 @@ class QdrantStore:
         client.create_collection(
             collection_name=collection_name,
             vectors_config=models.VectorParams(
-                size=384,   # Important: Ensure this matches the embedding model size that you use
+                size=768,   # Important: Ensure this matches the embedding model size that you use
                 distance=models.Distance.COSINE,
             ),
         )
@@ -55,18 +58,42 @@ class QdrantStore:
             ]
         )
 
-    def search_documents(self, collection_name: str, query: str, limit: int = 5):
+    def search_documents(self, collection_name: str, query: str, limit: int = 25, rerank: bool = False):
         """
-        Search for documents in the Qdrant collection.
+        Search and optionally rerank results.
 
         :param collection_name: Name of the collection.
         :param query: Query string to search for.
         :param limit: Number of results to return.
-        :return: List of search results.
+        :param rerank: Whether to rerank results with a cross-encoder.
+        :return: List of (doc, score).
         """
+        # Step 1: Retrieve candidates with vector search
         hits = client.query_points(
             collection_name=collection_name,
             query=encoder.encode(query).tolist(),
             limit=limit,
         )
-        return hits
+
+        logger.info(f"Initial search results: {hits}")
+
+        results = [
+            {"doc": hit.payload, "vector_score": hit.score}
+            for hit in hits.points
+        ]
+
+        # Step 2: Rerank
+        if rerank and results:
+            pairs = [(query, r["doc"].get("text", str(r["doc"]))) for r in results]
+            rerank_scores = reranker.predict(pairs)
+
+            # Attach reranker score
+            for r, s in zip(results, rerank_scores):
+                r["rerank_score"] = float(s)
+
+            # Sort by reranker score (descending)
+            results = sorted(results, key=lambda x: x["rerank_score"], reverse=True)
+
+        logger.info(f"Final search results: {results}")
+
+        return results

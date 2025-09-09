@@ -9,3 +9,4 @@ class SearchPayload(BaseModel):
     collection_name: str = Field(..., description="Name of the collection")
     query: str = Field(..., description="Query string to search for")
     limit: int = Field(..., description="Number of results to return", ge=1)
+    rerank: bool = Field(True, description="Whether to rerank results with a cross-encoder")
