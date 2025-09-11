@@ -84,7 +84,7 @@ def document_search(
 
     try:
         results = qdrant.search_documents(
-            payload.collection_name, query, limit=payload.limit, rerank=payload.rerank)
+            payload.collection_name, query, limit=payload.limit, rerank=payload.rerank, min_score=payload.min_score)
         if not results:
             return response.error_response(404, "No results found.")
         results = [

@@ -58,7 +58,7 @@ class QdrantStore:
             ]
         )
 
-    def search_documents(self, collection_name: str, query: str, limit: int = 25, rerank: bool = False):
+    def search_documents(self, collection_name: str, query: str, limit: int = 25, rerank: bool = False, min_score: float = 0.0):
         """
         Search and optionally rerank results.
 
@@ -73,6 +73,7 @@ class QdrantStore:
             collection_name=collection_name,
             query=encoder.encode(query).tolist(),
             limit=limit,
+            score_threshold=min_score if min_score > 0.0 else None,
         )
 
         logger.info(f"Initial search results: {hits}")
