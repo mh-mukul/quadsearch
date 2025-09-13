@@ -1,8 +1,10 @@
 import os
 from uuid import uuid4
+from typing import List
 from dotenv import load_dotenv
 from configs.logger import logger
 from qdrant_client import models, QdrantClient
+from schemas.qdrant_store import ResultsSchema
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 load_dotenv()
@@ -10,7 +12,8 @@ load_dotenv()
 QADRANT_URL = os.getenv("QDRANT_URL")
 QADRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-RERANKER_MODEL = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+RERANKER_MODEL = os.getenv(
+    "RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
 
 client = QdrantClient(
     url=QADRANT_URL,
@@ -79,22 +82,32 @@ class QdrantStore:
         logger.info(f"Initial search results: {hits}")
 
         results = [
-            {"doc": hit.payload, "vector_score": hit.score}
+            ResultsSchema(
+                pageContent=hit.payload.get("content"),
+                metadata=hit.payload.get("metadata"),
+                id=hit.id,
+                relevance_score=float(hit.score)
+            )
             for hit in hits.points
         ]
 
         # Step 2: Rerank
         if rerank and results:
-            pairs = [(query, r["doc"].get("text", str(r["doc"]))) for r in results]
-            rerank_scores = reranker.predict(pairs)
-
-            # Attach reranker score
-            for r, s in zip(results, rerank_scores):
-                r["rerank_score"] = float(s)
-
-            # Sort by reranker score (descending)
-            results = sorted(results, key=lambda x: x["rerank_score"], reverse=True)
-
-        logger.info(f"Final search results: {results}")
+            results = rerank_results(results, query)
 
         return results
+
+
+def rerank_results(results: List[ResultsSchema], query: str):
+    # Prepare pairs for cross-encoder
+    pairs = [(query, item.pageContent) for item in results]
+    # Get relevance scores
+    relevance_score = reranker.predict(pairs)
+
+    # Attach relevance score
+    for item, score in zip(results, relevance_score):
+        item.relevance_score = float(score)
+
+    # Sort by relevance score (descending)
+    results = sorted(results, key=lambda x: x.relevance_score, reverse=True)
+    return results

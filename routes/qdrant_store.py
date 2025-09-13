@@ -5,9 +5,9 @@ from fastapi import APIRouter, Request, UploadFile, File, Form, Depends
 from configs.logger import logger
 from utils.auth import get_api_key
 from utils.helper import ResponseHelper
-from utils.qdrant_store import QdrantStore
+from utils.qdrant_store import QdrantStore, rerank_results
 from utils.extract_doc import prepare_documents_from_csv_stream
-from schemas.qdrant_store import CollectionCreatePayload, SearchPayload
+from schemas.qdrant_store import CollectionCreatePayload, SearchPayload, RerankRequestPayload
 
 DATA_DIR = "data"
 if not os.path.exists(DATA_DIR):
@@ -86,17 +86,31 @@ def document_search(
         results = qdrant.search_documents(
             payload.collection_name, query, limit=payload.limit, rerank=payload.rerank, min_score=payload.min_score)
         if not results:
-            return response.error_response(404, "No results found.")
-        results = [
-            {
-                # "score": hit.get("vector_score"),
-                # "rerank_score": hit.get("rerank_score"),
-                "content": hit["doc"]["content"],
-                "metadata": hit["doc"]["metadata"],
-            }
-            for hit in results
-        ]
+            return response.success_response(200, "No results found.")
         return response.success_response(200, "Success", results)
     except Exception as e:
         logger.error(f"Failed to search documents: {e}")
         return response.error_response(500, "Failed to search documents.", str(e))
+
+
+@router.post("/rerank")
+def document_rerank(
+    request: Request,
+    payload: RerankRequestPayload,
+    _: None = Depends(get_api_key),
+):
+    query = payload.query.strip()
+    if not query:
+        return response.error_response(400, "Query cannot be empty.")
+    if not payload.results:
+        return response.error_response(400, "Results cannot be empty.")
+
+    try:
+        results = rerank_results(payload.results, query)
+        results = results[:payload.limit]
+        if not results:
+            return response.success_response(200, "No results found.")
+        return response.success_response(200, "Success", results)
+    except Exception as e:
+        logger.error(f"Failed to rerank documents: {e}")
+        return response.error_response(500, "Failed to rerank documents.", str(e))
