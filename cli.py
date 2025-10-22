@@ -3,9 +3,9 @@ import argparse
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from configs.database import get_db
+from src.configs.database import get_db
 
-from models import ApiKey
+from src.models import ApiKey
 
 
 def generate_key(db: Session = Depends(get_db)):

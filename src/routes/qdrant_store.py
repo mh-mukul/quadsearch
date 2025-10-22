@@ -2,12 +2,12 @@ import os
 from uuid import uuid4
 from fastapi import APIRouter, Request, UploadFile, File, Form, Depends
 
-from configs.logger import logger
-from utils.auth import get_api_key
-from utils.helper import ResponseHelper
-from utils.qdrant_store import QdrantStore, rerank_results
-from utils.extract_doc import prepare_documents_from_csv_stream
-from schemas.qdrant_store import CollectionCreatePayload, SearchPayload, RerankRequestPayload
+from src.configs.logger import logger
+from src.utils.auth import get_api_key
+from src.utils.helper import ResponseHelper
+from src.utils.qdrant_store import QdrantStore, rerank_results
+from src.utils.extract_doc import prepare_documents_from_csv_stream
+from src.schemas.qdrant_store import CollectionCreatePayload, SearchPayload, RerankRequestPayload
 
 DATA_DIR = "data"
 if not os.path.exists(DATA_DIR):

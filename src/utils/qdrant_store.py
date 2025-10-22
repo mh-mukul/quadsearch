@@ -2,10 +2,11 @@ import os
 from uuid import uuid4
 from typing import List
 from dotenv import load_dotenv
-from configs.logger import logger
 from qdrant_client import models, QdrantClient
-from schemas.qdrant_store import ResultsSchema
 from sentence_transformers import SentenceTransformer, CrossEncoder
+
+from src.configs.logger import logger
+from src.schemas.qdrant_store import ResultsSchema
 
 load_dotenv()
 

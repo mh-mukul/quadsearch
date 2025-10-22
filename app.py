@@ -4,11 +4,11 @@ from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 
-from handlers.exception_handler import APIKeyException
-from handlers.exception_handler import (
+from src.handlers.exception_handler import APIKeyException
+from src.handlers.exception_handler import (
     validation_exception_handler, general_exception_handler, api_key_exception_handler)
 
-from routes.qdrant_store import router as qdrant_routes
+from src.routes.qdrant_store import router as qdrant_routes
 
 load_dotenv()
 
