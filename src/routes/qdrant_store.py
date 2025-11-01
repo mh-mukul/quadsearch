@@ -9,6 +9,8 @@ from src.utils.qdrant_store import QdrantStore, rerank_results
 from src.utils.extract_doc import prepare_documents_from_csv_stream
 from src.schemas.qdrant_store import CollectionCreatePayload, SearchPayload, RerankRequestPayload
 
+from src.utils.doc_processor import process_document
+
 DATA_DIR = "data"
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
@@ -114,3 +116,27 @@ def document_rerank(
     except Exception as e:
         logger.error(f"Failed to rerank documents: {e}")
         return response.error_response(500, "Failed to rerank documents.", str(e))
+
+
+@router.post("/process_doc")
+def process_doc(
+    request: Request,
+    file: UploadFile = File(..., description="Document file to process"),
+    _: None = Depends(get_api_key),
+):
+    filename = uuid4().hex + "_" + file.filename
+    file_path = f"{DATA_DIR}/{filename}"
+    with open(file_path, "wb") as f:
+        f.write(file.file.read())
+
+    try:
+        doc_info = process_document(file_path)
+        os.remove(file_path)
+        if doc_info['status'] == 'Success':
+            return response.success_response(200, "Document processed successfully.", doc_info)
+        else:
+            return response.error_response(500, "Document processing failed.", doc_info)
+    except Exception as e:
+        os.remove(file_path)
+        logger.error(f"Failed to process document: {e}")
+        return response.error_response(500, "Failed to process document.", str(e))
