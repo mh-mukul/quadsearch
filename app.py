@@ -21,6 +21,9 @@ app = FastAPI(
     docs_url="/docs" if DEBUG else None,  # Disable Swagger UI
     redoc_url="/redoc" if DEBUG else None,  # Disable ReDoc
     openapi_url="/openapi.json" if DEBUG else None,  # Disable OpenAPI
+    swagger_ui_parameters={
+        "persistAuthorization": True
+    }
 )
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -46,3 +49,8 @@ app.include_router(qdrant_routes, prefix="/api/v1")
 @app.get("/")
 async def root():
     return {"status": 200, "message": "Server is up and running!", "data": "Made with ❤️"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

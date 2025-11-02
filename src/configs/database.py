@@ -24,10 +24,14 @@ if DB_TYPE == "mysql":
 
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
-        pool_recycle=int(os.environ.get("POOL_RECYCLE", 300)),  # Time(in sec) after the connection is recycled
-        pool_size=int(os.environ.get("POOL_SIZE", 10)),         # Number of connections to keep open in the pool
-        max_overflow=int(os.environ.get("MAX_OVERFLOW", 20)),   # Number of connections to allow beyond the pool size
-        pool_timeout=int(os.environ.get("POOL_TIMEOUT", 60)),   # Time(in sec) to wait before giving up on getting a connection
+        # Time(in sec) after the connection is recycled
+        pool_recycle=int(os.environ.get("POOL_RECYCLE", 300)),
+        # Number of connections to keep open in the pool
+        pool_size=int(os.environ.get("POOL_SIZE", 10)),
+        # Number of connections to allow beyond the pool size
+        max_overflow=int(os.environ.get("MAX_OVERFLOW", 20)),
+        # Time(in sec) to wait before giving up on getting a connection
+        pool_timeout=int(os.environ.get("POOL_TIMEOUT", 60)),
     )
 
 elif DB_TYPE == "sqlite":
@@ -40,8 +44,29 @@ elif DB_TYPE == "sqlite":
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
     )
 
+elif DB_TYPE == "postgresql":
+    # PostgreSQL connection configuration
+    POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+    POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", 5432))
+    POSTGRES_USER = os.getenv("POSTGRES_USER")
+    POSTGRES_PASSWORD = quote_plus(os.getenv("POSTGRES_PASSWORD"))
+    POSTGRES_DATABASE = os.getenv("POSTGRES_DATABASE")
+
+    SQLALCHEMY_DATABASE_URL = (
+        f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DATABASE}"
+    )
+
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        pool_recycle=int(os.environ.get("POOL_RECYCLE", 300)),
+        pool_size=int(os.environ.get("POOL_SIZE", 10)),
+        max_overflow=int(os.environ.get("MAX_OVERFLOW", 20)),
+        pool_timeout=int(os.environ.get("POOL_TIMEOUT", 60)),
+    )
+
 else:
-    raise ValueError("Invalid DB_TYPE specified. Choose 'mysql' or 'sqlite'.")
+    raise ValueError(
+        "Invalid DB_TYPE specified. Choose 'mysql', 'sqlite', or 'postgresql'.")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
