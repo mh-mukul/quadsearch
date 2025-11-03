@@ -10,17 +10,31 @@ if not os.path.exists(LOG_DIR):
 
 log_file = f"{LOG_DIR}/app.log"
 
-# Create a single logger instance
+# Configure the root logger first
+logging.basicConfig(level=logging.INFO)
+
+# Create our app logger instance
 logger = logging.getLogger("app_logger")
 logger.setLevel(logging.INFO)
 
-if not logger.hasHandlers():
-    handler = TimedRotatingFileHandler(
-        log_file, when="midnight", interval=1, backupCount=7)
+# Remove any existing handlers to prevent duplication
+for handler in logger.handlers[:]:
+    logger.removeHandler(handler)
 
-    formatter = logging.Formatter(
-        "%(asctime)s - %(funcName)s - %(levelname)s - %(message)s"
-    )
-    handler.setFormatter(formatter)
+# Add file handler
+file_handler = TimedRotatingFileHandler(
+    log_file, when="midnight", interval=1, backupCount=7)
 
-    logger.addHandler(handler)
+formatter = logging.Formatter(
+    "%(asctime)s - %(funcName)s - %(levelname)s - %(message)s"
+)
+file_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
+# Prevent logs from being propagated to the root logger (console)
+logger.propagate = False
+
+# Also ensure root logger doesn't output to console
+root_logger = logging.getLogger()
+root_logger.handlers = []
+root_logger.addHandler(file_handler)
