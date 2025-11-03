@@ -1,65 +1,67 @@
-import os
 from uuid import uuid4
 from typing import List
-from dotenv import load_dotenv
 from qdrant_client import models, QdrantClient
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from src.configs.logger import logger
 from src.schemas.qdrant_store import ResultsSchema
 
-load_dotenv()
-
-QADRANT_URL = os.getenv("QDRANT_URL")
-QADRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-RERANKER_MODEL = os.getenv(
-    "RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
-
-client = QdrantClient(
-    url=QADRANT_URL,
-    api_key=QADRANT_API_KEY,
-)
-encoder = SentenceTransformer(EMBEDDING_MODEL, trust_remote_code=True)
-reranker = CrossEncoder(RERANKER_MODEL)
-
 
 class QdrantStore:
+    def __init__(self, client: QdrantClient, encoder: SentenceTransformer, reranker: CrossEncoder):
+        self.client = client
+        self.encoder = encoder
+        self.reranker = reranker
+
+        try:
+            self.vector_size = self.encoder.get_sentence_embedding_dimension()
+            logger.info(
+                f"QdrantStore initialized with vector size: {self.vector_size}")
+        except Exception as e:
+            logger.error(
+                f"Failed to get sentence embedding dimension from encoder: {e}")
+            raise ValueError(f"Invalid SentenceTransformer model: {e}") from e
+
     def create_collection(self, collection_name: str):
         """
         Create a Qdrant collection.
 
         :param collection_name: Name of the collection.
         """
-        client.create_collection(
+        self.client.create_collection(
             collection_name=collection_name,
             vectors_config=models.VectorParams(
-                size=768,   # Important: Ensure this matches the embedding model size that you use
+                size=self.vector_size,
                 distance=models.Distance.COSINE,
             ),
         )
 
-    def add_documents(self, collection_name: str, documents: list, vector_columns: list[str]):
+    def add_documents(self, collection_name: str, documents: list):
         """
         Add documents to the Qdrant collection.
 
         :param collection_name: Name of the collection.
         :param documents: List of documents to add.
-        :param vector_columns: List of column names to use for vectorization.
         """
-        client.upload_points(
+        # 1. Prepare all texts in a batch
+        texts_to_encode = [
+            doc.get("content", "") for doc in documents
+        ]
+
+        # 2. Encode the entire batch in one call
+        vectors = self.encoder.encode(texts_to_encode)
+
+        # 3. Create points (this part is fast)
+        points = [
+            models.PointStruct(
+                id=uuid4().hex, vector=vector.tolist(), payload=doc)
+            for doc, vector in zip(documents, vectors)
+        ]
+
+        # 4. Upload all points in one batch
+        self.client.upload_points(
             collection_name=collection_name,
-            points=[
-                models.PointStruct(
-                    id=uuid4().hex,
-                    vector=encoder.encode(
-                        " ".join(
-                            f"{col}: {doc[col]}" for col in vector_columns if col in doc)
-                    ).tolist(),
-                    payload=doc
-                )
-                for doc in documents
-            ]
+            points=points,
         )
 
     def search_documents(self, collection_name: str, query: str, limit: int = 25, rerank: bool = False, min_score: float = 0.0):
@@ -70,12 +72,13 @@ class QdrantStore:
         :param query: Query string to search for.
         :param limit: Number of results to return.
         :param rerank: Whether to rerank results with a cross-encoder.
+        :param min_score: Minimum score for results to be included.
         :return: List of (doc, score).
         """
         # Step 1: Retrieve candidates with vector search
-        hits = client.query_points(
+        hits = self.client.query_points(
             collection_name=collection_name,
-            query=encoder.encode(query).tolist(),
+            query=self.encoder.encode(query).tolist(),
             limit=limit,
             score_threshold=min_score if min_score > 0.0 else None,
         )
@@ -94,21 +97,28 @@ class QdrantStore:
 
         # Step 2: Rerank
         if rerank and results:
-            results = rerank_results(results, query)
+            results = self.rerank_results(results, query)
 
         return results
 
+    def rerank_results(self, results: List[ResultsSchema], query: str):
+        """
+        Rerank results using a cross-encoder.
 
-def rerank_results(results: List[ResultsSchema], query: str):
-    # Prepare pairs for cross-encoder
-    pairs = [(query, item.pageContent) for item in results]
-    # Get relevance scores
-    relevance_score = reranker.predict(pairs)
+        :param results: List of results to rerank.
+        :param query: Query string.
+        :return: Reranked list of results.
+        """
+        # Prepare pairs for cross-encoder
+        pairs = [(query, item.pageContent) for item in results]
+        # Get relevance scores
+        relevance_score = self.reranker.predict(pairs)
 
-    # Attach relevance score
-    for item, score in zip(results, relevance_score):
-        item.relevance_score = float(score)
+        # Attach relevance score
+        for item, score in zip(results, relevance_score):
+            item.relevance_score = float(score)
 
-    # Sort by relevance score (descending)
-    results = sorted(results, key=lambda x: x.relevance_score, reverse=True)
-    return results
+        # Sort by relevance score (descending)
+        results = sorted(
+            results, key=lambda x: x.relevance_score, reverse=True)
+        return results

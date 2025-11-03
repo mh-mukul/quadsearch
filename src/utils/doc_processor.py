@@ -1,78 +1,92 @@
 from pathlib import Path
-from annotated_types import doc
-from transformers import AutoTokenizer
 from docling.chunking import HybridChunker
 from docling.document_converter import DocumentConverter
 
 from src.configs.logger import logger
 
-converter = DocumentConverter()
-model_id = "sentence-transformers/all-MiniLM-L6-v2"
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-chunker = HybridChunker(
-    tokenizer=tokenizer,
-    max_tokens=512,
-    merge_peers=True  # Merge small adjacent chunks
-)
 
+class DoclingProcessor:
+    def __init__(self, converter: DocumentConverter, chunker: HybridChunker):
+        self.converter = converter
+        self.chunker = chunker
 
-def process_document(file_path: str) -> dict:
-    """Process a single document and return metadata."""
-    try:
-        logger.info(f"📄 Processing: {Path(file_path).name}")
+    def process_document(self, file_path: str) -> dict:
+        """Process a single document and return metadata."""
+        try:
+            logger.info(f"📄 Processing: {Path(file_path).name}")
 
-        # Convert document
-        result = converter.convert(file_path)
-        dl_doc = result.document
+            # Convert document
+            result = self.converter.convert(file_path)
+            dl_doc = result.document
 
-        # Convert to markdown
-        logger.info(f"   Step: Converting document to markdown...")
-        markdown = dl_doc.export_to_markdown()
-        # Save output
-        output_file = f"data/output_{Path(file_path).stem}.md"
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(markdown)
+            # Convert to markdown
+            logger.info(f"   Step: Converting document to markdown...")
+            markdown = dl_doc.export_to_markdown()
+            # Save output
+            output_file = f"data/output_{Path(file_path).stem}.md"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(markdown)
 
-        # Get document info
-        doc_info = {
-            'file': Path(file_path).name,
-            'format': Path(file_path).suffix,
-            'status': 'Success'
-        }
+            # Get document info
+            doc_info = {
+                'file': Path(file_path).name,
+                'format': Path(file_path).suffix,
+                'docling_doc': dl_doc,
+                'status': 'Success'
+            }
 
-        doc_info['output_file'] = output_file
+            doc_info['output_file'] = output_file
 
-        logger.info(f"   ✓ Converted successfully")
-        logger.info(f"   ✓ Output: {output_file}")
+            logger.info(f"   ✓ Converted successfully")
+            logger.info(f"   ✓ Output: {output_file}")
 
-        # Chunk document
-        logger.info(f"   Step: Chunking document...")
-        chunk_iter = chunker.chunk(dl_doc=dl_doc)
-        chunks = list(chunk_iter)
-        doc_info['num_chunks'] = len(chunks)
-        logger.info(f"   ✓ Generated {len(chunks)} chunks")
+            return doc_info
+        except Exception as e:
+            logger.error(f"   ✗ Error: {e}")
+            return {
+                'file': Path(file_path).name,
+                'format': Path(file_path).suffix,
+                'status': 'Failed',
+                'error': str(e)
+            }
 
-        output_path = f"data/chunks_{Path(file_path).stem}.txt"
-        # Save chunks
-        with open(output_path, 'w', encoding='utf-8') as f:
-            for i, chunk in enumerate(chunks):
-                f.write(f"{'='*60}\n")
-                f.write(f"CHUNK {i}\n")
-                f.write(f"{'='*60}\n")
+    def chunk_document(self, file_path: str, dl_doc) -> dict:
+        """Chunk a document and return metadata."""
+        try:
+            chunks_info = {
+                'file': Path(file_path).name,
+                'format': Path(file_path).suffix,
+                'status': 'Success'
+            }
+            # Chunk document
+            logger.info(f"   Step: Chunking document...")
+            chunk_iter = self.chunker.chunk(dl_doc=dl_doc)
+            chunks = list(chunk_iter)
+            chunks_info['num_chunks'] = len(chunks)
+            logger.info(f"   ✓ Generated {len(chunks)} chunks")
 
-                # Use contextualize to preserve headings and metadata
-                contextualized_text = chunker.contextualize(chunk=chunk)
-                f.write(contextualized_text)
-                f.write("\n\n")
-            print(f"\n✓ Chunks saved to: {output_path}")
+            output_path = f"data/chunks_{Path(file_path).stem}.txt"
+            # Save chunks
+            with open(output_path, 'w', encoding='utf-8') as f:
+                for i, chunk in enumerate(chunks):
+                    f.write(f"{'='*60}\n")
+                    f.write(f"CHUNK {i}\n")
+                    f.write(f"{'='*60}\n")
 
-        return doc_info
+                    # Use contextualize to preserve headings and metadata
+                    contextualized_text = self.chunker.contextualize(
+                        chunk=chunk)
+                    f.write(contextualized_text)
+                    f.write("\n\n")
+                logger.info(f"\n✓ Chunks saved to: {output_path}")
 
-    except Exception as e:
-        logger.error(f"   ✗ Error: {e}")
-        return {
-            'file': Path(file_path).name,
-            'format': Path(file_path).suffix,
-            'status': 'Failed',
-            'error': str(e)
-        }
+            return chunks_info
+
+        except Exception as e:
+            logger.error(f"   ✗ Error: {e}")
+            return {
+                'file': Path(file_path).name,
+                'format': Path(file_path).suffix,
+                'status': 'Failed',
+                'error': str(e)
+            }
