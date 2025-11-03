@@ -49,7 +49,7 @@ class QdrantStore:
         ]
 
         # 2. Encode the entire batch in one call
-        vectors = self.encoder.encode(texts_to_encode)
+        vectors = self.encoder.encode(texts_to_encode, show_progress_bar=False)
 
         # 3. Create points (this part is fast)
         points = [

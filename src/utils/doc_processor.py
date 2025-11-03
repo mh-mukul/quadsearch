@@ -1,3 +1,4 @@
+import uuid
 from pathlib import Path
 from docling.chunking import HybridChunker
 from docling.document_converter import DocumentConverter
@@ -65,20 +66,26 @@ class DoclingProcessor:
             chunks_info['num_chunks'] = len(chunks)
             logger.info(f"   ✓ Generated {len(chunks)} chunks")
 
-            output_path = f"data/chunks_{Path(file_path).stem}.txt"
-            # Save chunks
-            with open(output_path, 'w', encoding='utf-8') as f:
-                for i, chunk in enumerate(chunks):
-                    f.write(f"{'='*60}\n")
-                    f.write(f"CHUNK {i}\n")
-                    f.write(f"{'='*60}\n")
+            chunks_info['chunks'] = [
+                {
+                    'id': uuid.uuid4().hex,
+                    'content': self.chunker.contextualize(chunk=chunk)
+                } for chunk in chunks
+            ]
+            # # Save chunks
+            # output_path = f"data/chunks_{Path(file_path).stem}.txt"
+            # with open(output_path, 'w', encoding='utf-8') as f:
+            #     for i, chunk in enumerate(chunks):
+            #         f.write(f"{'='*60}\n")
+            #         f.write(f"CHUNK {i}\n")
+            #         f.write(f"{'='*60}\n")
 
-                    # Use contextualize to preserve headings and metadata
-                    contextualized_text = self.chunker.contextualize(
-                        chunk=chunk)
-                    f.write(contextualized_text)
-                    f.write("\n\n")
-                logger.info(f"\n✓ Chunks saved to: {output_path}")
+            #         # Use contextualize to preserve headings and metadata
+            #         contextualized_text = self.chunker.contextualize(
+            #             chunk=chunk)
+            #         f.write(contextualized_text)
+            #         f.write("\n\n")
+            #     logger.info(f"\n✓ Chunks saved to: {output_path}")
 
             return chunks_info
 

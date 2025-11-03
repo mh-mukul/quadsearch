@@ -3,7 +3,7 @@ from uuid import uuid4
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer, CrossEncoder
-from fastapi import APIRouter, Request, UploadFile, File, Depends
+from fastapi import APIRouter, Request, UploadFile, Form, File, Depends
 
 from transformers import AutoTokenizer
 from docling.chunking import HybridChunker
@@ -109,6 +109,7 @@ def document_rerank(
 @router.post("/process_doc")
 def process_doc(
     request: Request,
+    collection_name: str = Form(..., description="Qdrant collection name to store document chunks."),
     file: UploadFile = File(..., description="Document file to process"),
     _: None = Depends(get_api_key),
 ):
@@ -126,10 +127,31 @@ def process_doc(
             chunk_info = doc_processor.chunk_document(
                 doc_info['output_file'], doc_info['docling_doc'])
 
-            return response.success_response(200, "Document processed successfully.", chunk_info)
+            # Prepare chunks for Qdrant storage
+            chunks_to_store = []
+            for chunk in chunk_info['chunks']:
+                chunk_doc = {
+                    "content": chunk['content'],
+                    "metadata": {
+                        "filename": file.filename,
+                        "chunk_id": chunk['id'],
+                        "source_file": doc_info['output_file']
+                    }
+                }
+                chunks_to_store.append(chunk_doc)
+
+            # Store chunks in Qdrant
+            qdrant.add_documents(collection_name, chunks_to_store)
+
+            return response.success_response(200, "Document processed and stored successfully.", {
+                # "processing_info": chunk_info,
+                "collection_name": collection_name,
+                "chunks_stored": len(chunks_to_store)
+            })
         else:
             return response.error_response(500, "Document processing failed.", doc_info)
     except Exception as e:
-        os.remove(file_path)
+        if os.path.exists(file_path):
+            os.remove(file_path)
         logger.error(f"Failed to process document: {e}")
         return response.error_response(500, "Failed to process document.", str(e))
