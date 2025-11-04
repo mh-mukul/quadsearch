@@ -18,6 +18,9 @@ class DoclingProcessor:
         self.converter = converter
         self.chunker = chunker
 
+        logger.info(
+            f"DoclingProcessor initialized with chunker size: {chunker.max_tokens}")
+
     def process_document(self, file_path: str) -> dict:
         """Process a single document and return metadata.
 
