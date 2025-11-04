@@ -2,32 +2,17 @@ import os
 from uuid import uuid4
 from pathlib import Path
 from dotenv import load_dotenv
-from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer, CrossEncoder
 from fastapi import APIRouter, Request, UploadFile, Form, File, Depends
 
 from src.configs.logger import logger
 from src.utils.auth import get_api_key
+from src.utils.initializers import qdrant
 from src.utils.helper import ResponseHelper
-from src.utils.qdrant_store import QdrantStore
-from src.schemas.qdrant_store import CollectionCreatePayload, SearchPayload, RerankRequestPayload
-
 from src.tasks import process_and_store_document
+from src.schemas.qdrant_store import CollectionCreatePayload, SearchPayload, RerankRequestPayload
 
 load_dotenv()
 DOCUMENT_DIR = os.getenv('DOCUMENT_DIR', 'documents')
-
-QADRANT_URL = os.getenv("QDRANT_URL")
-QADRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-RERANKER_MODEL = os.getenv(
-    "RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
-
-qdrant = QdrantStore(
-    client=QdrantClient(url=QADRANT_URL, api_key=QADRANT_API_KEY),
-    encoder=SentenceTransformer(EMBEDDING_MODEL),
-    reranker=CrossEncoder(RERANKER_MODEL)
-)
 
 response = ResponseHelper()
 router = APIRouter(prefix="", tags=["Qdrant Store"])
