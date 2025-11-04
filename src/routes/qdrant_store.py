@@ -1,5 +1,6 @@
 import os
 from uuid import uuid4
+from pathlib import Path
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer, CrossEncoder
@@ -16,11 +17,8 @@ from src.utils.qdrant_store import QdrantStore
 from src.utils.doc_processor import DoclingProcessor
 from src.schemas.qdrant_store import CollectionCreatePayload, SearchPayload, RerankRequestPayload
 
-DATA_DIR = "data"
-if not os.path.exists(DATA_DIR):
-    os.makedirs(DATA_DIR)
-
 load_dotenv()
+DOCUMENT_DIR = os.getenv('DOCUMENT_DIR', 'documents')
 
 QADRANT_URL = os.getenv("QDRANT_URL")
 QADRANT_API_KEY = os.getenv("QDRANT_API_KEY")
@@ -114,14 +112,14 @@ def process_doc(
     _: None = Depends(get_api_key),
 ):
     filename = uuid4().hex + "_" + file.filename
-    file_path = f"{DATA_DIR}/{filename}"
+    file_path = f"{DOCUMENT_DIR}/uploads/{filename}"
+    os.makedirs(Path(file_path).parent, exist_ok=True)
     with open(file_path, "wb") as f:
         f.write(file.file.read())
 
     try:
         # Process document
         doc_info = doc_processor.process_document(file_path)
-        os.remove(file_path)
         if doc_info['status'] == 'Success':
             # Chunk document
             chunk_info = doc_processor.chunk_document(
@@ -151,7 +149,5 @@ def process_doc(
         else:
             return response.error_response(500, "Document processing failed.", doc_info)
     except Exception as e:
-        if os.path.exists(file_path):
-            os.remove(file_path)
         logger.error(f"Failed to process document: {e}")
         return response.error_response(500, "Failed to process document.", str(e))

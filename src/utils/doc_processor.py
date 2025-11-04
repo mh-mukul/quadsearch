@@ -1,9 +1,16 @@
+import os
 import uuid
 from pathlib import Path
+from dotenv import load_dotenv
 from docling.chunking import HybridChunker
 from docling.document_converter import DocumentConverter
 
 from src.configs.logger import logger
+
+
+load_dotenv()
+
+DOCUMENT_DIR = os.getenv('DOCUMENT_DIR', 'documents')
 
 
 class DoclingProcessor:
@@ -12,7 +19,11 @@ class DoclingProcessor:
         self.chunker = chunker
 
     def process_document(self, file_path: str) -> dict:
-        """Process a single document and return metadata."""
+        """Process a single document and return metadata.
+
+        :param file_path: Path to the document file.
+        :return: Metadata dictionary about the processing result.
+        """
         try:
             logger.info(f"📄 Processing: {Path(file_path).name}")
 
@@ -24,7 +35,8 @@ class DoclingProcessor:
             logger.info(f"   Step: Converting document to markdown...")
             markdown = dl_doc.export_to_markdown()
             # Save output
-            output_file = f"data/output_{Path(file_path).stem}.md"
+            output_file = f"{DOCUMENT_DIR}/processed/{Path(file_path).stem}.md"
+            os.makedirs(Path(output_file).parent, exist_ok=True)
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(markdown)
 
@@ -52,7 +64,12 @@ class DoclingProcessor:
             }
 
     def chunk_document(self, file_path: str, dl_doc) -> dict:
-        """Chunk a document and return metadata."""
+        """Chunk a document and return metadata.
+
+        :param file_path: Path to the document file.
+        :param dl_doc: Docling document object.
+        :return: Metadata dictionary about the chunking result.
+        """
         try:
             chunks_info = {
                 'file': Path(file_path).name,
@@ -72,20 +89,6 @@ class DoclingProcessor:
                     'content': self.chunker.contextualize(chunk=chunk)
                 } for chunk in chunks
             ]
-            # # Save chunks
-            # output_path = f"data/chunks_{Path(file_path).stem}.txt"
-            # with open(output_path, 'w', encoding='utf-8') as f:
-            #     for i, chunk in enumerate(chunks):
-            #         f.write(f"{'='*60}\n")
-            #         f.write(f"CHUNK {i}\n")
-            #         f.write(f"{'='*60}\n")
-
-            #         # Use contextualize to preserve headings and metadata
-            #         contextualized_text = self.chunker.contextualize(
-            #             chunk=chunk)
-            #         f.write(contextualized_text)
-            #         f.write("\n\n")
-            #     logger.info(f"\n✓ Chunks saved to: {output_path}")
 
             return chunks_info
 
