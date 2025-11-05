@@ -1,4 +1,5 @@
 import os
+import json
 from uuid import uuid4
 from pathlib import Path
 from dotenv import load_dotenv
@@ -82,6 +83,7 @@ def process_doc(
     collection_name: str = Form(
         ..., description="Qdrant collection name to store document chunks."),
     file: UploadFile = File(..., description="Document file to process"),
+    metadata: str = Form(None, description="Optional metadata for the document in JSON format"),
     _: None = Depends(get_api_key),
 ):
     filename = uuid4().hex + "_" + file.filename
@@ -91,8 +93,11 @@ def process_doc(
         f.write(file.file.read())
 
     try:
+        metadata_dict = {}
+        if metadata:
+            metadata_dict = json.loads(metadata)
         task = process_and_store_document.delay(
-            file_path, collection_name)
+            file_path, collection_name, metadata=metadata_dict)
         return response.success_response(
             202,
             "Document processing started.",
