@@ -9,7 +9,7 @@ from src.configs.logger import logger
 from src.utils.auth import get_api_key
 from src.utils.initializers import qdrant
 from src.utils.helper import ResponseHelper
-from src.tasks import process_and_store_document
+from src.celery_tasks import process_and_store_document
 from src.schemas.qdrant_store import CollectionCreatePayload, SearchPayload, RerankRequestPayload
 
 load_dotenv()
@@ -83,7 +83,8 @@ def process_doc(
     collection_name: str = Form(
         ..., description="Qdrant collection name to store document chunks."),
     file: UploadFile = File(..., description="Document file to process"),
-    metadata: str = Form(None, description="Optional metadata for the document in JSON format"),
+    metadata: str = Form(
+        None, description="Optional metadata for the document in JSON format"),
     _: None = Depends(get_api_key),
 ):
     filename = uuid4().hex + "_" + file.filename
@@ -96,12 +97,18 @@ def process_doc(
         metadata_dict = {}
         if metadata:
             metadata_dict = json.loads(metadata)
+
         task = process_and_store_document.delay(
             file_path, collection_name, metadata=metadata_dict)
+        
         return response.success_response(
             202,
             "Document processing started.",
-            {"task_id": task.id, "file": file.filename},
+            {
+                "task_id": task.id,
+                "file": file.filename,
+                "status": "PENDING"
+            },
         )
     except Exception as e:
         logger.error(f"Failed to start document processing task: {e}")

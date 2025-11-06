@@ -33,7 +33,7 @@ celery_app.conf.result_backend_transport_options = {
 
 # Function to import tasks after app initialization
 def register_tasks():
-    import src.tasks
+    import src.celery_tasks
 
 
 register_tasks()

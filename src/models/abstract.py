@@ -12,9 +12,10 @@ class AbstractBase(Base):
     is_active = Column(Boolean, default=True)
     is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True),
-                        default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=datetime.now(
-        timezone.utc), onupdate=datetime.now(timezone.utc))
+                        default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True),
+                        default=lambda: datetime.now(timezone.utc),
+                        onupdate=lambda: datetime.now(timezone.utc))
 
     def soft_delete(self):
         self.is_active = False
