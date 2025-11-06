@@ -58,3 +58,4 @@ logs/
 data/
 .vscode/
 documents/
+supervisord.pid
