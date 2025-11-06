@@ -50,7 +50,6 @@ def process_and_store_document(self, file_path: str, collection_name: str, metad
             # Update task status
             task.status = "COMPLETED"
             task.completed_at = datetime.now(tz=timezone.utc)
-            # task.updated_at = datetime.now(tz=timezone.utc)
             db.commit()
 
             return f"Document '{doc_info['file']}' processed and stored successfully."
@@ -58,7 +57,6 @@ def process_and_store_document(self, file_path: str, collection_name: str, metad
             # Update task status for processing failure
             task.status = "FAILED"
             task.completed_at = datetime.now(tz=timezone.utc)
-            # task.updated_at = datetime.now(tz=timezone.utc)
             db.commit()
             return f"Document processing failed: {doc_info}"
     except Exception as e:
@@ -66,7 +64,6 @@ def process_and_store_document(self, file_path: str, collection_name: str, metad
         # Update task status for error
         task.status = "FAILED"
         task.completed_at = datetime.now(tz=timezone.utc)
-        # task.updated_at = datetime.now(tz=timezone.utc)
         db.commit()
         return f"Error in processing and storing document: {e}"
     finally:

@@ -1,20 +1,16 @@
 services:
-  # FastAPI app service
-  quadsearch-backend:
-    build: .
-    container_name: quadsearch-backend
-    image: quadsearch-backend
+  # Redis service
+  redis:
+    image: redis:latest
+    container_name: quadsearch-redis
     restart: always
-    ports:
-      - "${DOCKER_PORT:-8001}:8001"
-    environment:
-      - TZ=Asia/Dhaka
-    volumes:
-      - ${LOG_DIR}:/app/${LOG_DIR}
-      - ./:/app
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_NICE
+    command: ["redis-server", "--protected-mode", "no"]
     networks:
-      - custom-network
-    command: uvicorn app:app --host 0.0.0.0 --port 8001 --worker 4 --timeout-keep-alive 60
+      - quadsearch_network
 
   # Qdrant service 
   qdrant:
@@ -33,7 +29,32 @@ services:
     volumes:
       - ./qdrant_data:/qdrant/storage
     networks:
-      - custom-network
+      - quadsearch_network
+
+  # Backend service
+  quadsearch-backend:
+    build: .
+    container_name: quadsearch-backend
+    image: quadsearch-backend
+    restart: always
+    ports:
+      - "${DOCKER_PORT:-8001}:8001"
+    environment:
+      - TZ=Asia/Dhaka
+    volumes:
+      - ${LOG_DIR:-./logs}:/app/${LOG_DIR}
+      - ./:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health || exit 1"]
+      interval: 1m
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - quadsearch_network
+    depends_on:
+      - redis
+      - qdrant
 
 configs:
   qdrant_config:
@@ -41,5 +62,5 @@ configs:
       log_level: INFO
 
 networks:
-  custom-network:
+  quadsearch_network:
     driver: bridge
