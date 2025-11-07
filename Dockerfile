@@ -8,6 +8,8 @@ COPY requirements.txt /app/
 # Install system dependencies including OpenGL libraries
 RUN apt-get update && apt-get install -y \
     libgl1 \
+    nano \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies before copying source code to prevent cache busting

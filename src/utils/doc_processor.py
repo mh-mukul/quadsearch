@@ -10,7 +10,7 @@ from src.configs.logger import logger
 
 load_dotenv()
 
-DOCUMENT_DIR = os.getenv('DOCUMENT_DIR', 'documents')
+DOCUMENT_DIR = os.getenv('DATA_DIR', 'data') + '/documents'
 
 
 class DoclingProcessor:

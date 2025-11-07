@@ -13,7 +13,7 @@ from src.celery_tasks import process_and_store_document
 from src.schemas.qdrant_store import CollectionCreatePayload, SearchPayload, RerankRequestPayload
 
 load_dotenv()
-DOCUMENT_DIR = os.getenv('DOCUMENT_DIR', 'documents')
+DOCUMENT_DIR = os.getenv('DATA_DIR', 'data') + '/documents'
 
 response = ResponseHelper()
 router = APIRouter(prefix="", tags=["Qdrant Store"])

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from logging.handlers import TimedRotatingFileHandler
 
 load_dotenv()
-LOG_DIR = os.environ.get("LOG_DIR", "./logs")
+LOG_DIR = os.environ.get("DATA_DIR", "data") + "/logs"
 if not os.path.exists(LOG_DIR):
     os.mkdir(LOG_DIR)
 

@@ -27,7 +27,7 @@ services:
       - source: qdrant_config
         target: /qdrant/config/production.yaml
     volumes:
-      - ./qdrant_data:/qdrant/storage
+      - ${DATA_DIR:-./data}/qdrant_data:/qdrant/storage
     environment:
       - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
     networks:
@@ -44,8 +44,7 @@ services:
     environment:
       - TZ=Asia/Dhaka
     volumes:
-      - ${LOG_DIR:-./logs}:/app/${LOG_DIR}
-      - ./:/app
+      - ${DATA_DIR:-./data}:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health || exit 1"]
       interval: 1m

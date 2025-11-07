@@ -36,7 +36,9 @@ if DB_TYPE == "mysql":
 
 elif DB_TYPE == "sqlite":
     # SQLite configuration
-    SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "sqlite.db")
+    SQLITE_DB_PATH = os.getenv("DATA_DIR", "data") + "/sqlite.db"
+    if not os.path.exists(os.path.dirname(SQLITE_DB_PATH)):
+        os.makedirs(os.path.dirname(SQLITE_DB_PATH))
 
     SQLALCHEMY_DATABASE_URL = f"sqlite:///{SQLITE_DB_PATH}"
 
