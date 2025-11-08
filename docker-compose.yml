@@ -11,6 +11,8 @@ services:
     command: ["redis-server", "--protected-mode", "no"]
     networks:
       - quadsearch_network
+    profiles:
+      - full
 
   # Qdrant service 
   qdrant:
@@ -32,6 +34,8 @@ services:
       - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
     networks:
       - quadsearch_network
+    profiles:
+      - full
 
   # Backend service
   quadsearch-backend:
@@ -53,9 +57,18 @@ services:
       start_period: 30s
     networks:
       - quadsearch_network
+    profiles:
+      - core
+      - full
     depends_on:
-      - redis
-      - qdrant
+      redis:
+        condition: service_started
+        required: false
+      qdrant:
+        condition: service_started
+        required: false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 configs:
   qdrant_config:

@@ -15,11 +15,11 @@ load_dotenv()
 
 QADRANT_URL = os.getenv("QDRANT_URL")
 QADRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "./data/artifacts/all-MiniLM-L6-v2")
 RERANKER_MODEL = os.getenv(
-    "RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+    "RERANKER_MODEL", "./data/artifacts/ms-marco-MiniLM-L-6-v2")
 CHUNKER_MODEL = os.getenv(
-    "CHUNKER_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    "CHUNKER_MODEL", "./data/artifacts/all-MiniLM-L6-v2")
 CHUNKER_MAX_TOKENS = int(os.getenv("CHUNKER_MAX_TOKENS", 512))
 DOCUMENT_DIR = os.getenv('DOCUMENT_DIR', 'documents')
 
