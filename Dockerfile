@@ -1,27 +1,60 @@
-FROM python:3.11
+# ============================
+# Stage 1 — Builder
+# ============================
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Copy only requirements.txt first to leverage caching
-COPY requirements.txt /app/
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Install system dependencies including OpenGL libraries
-RUN apt-get update && apt-get install -y \
+# Install minimal build and runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     libgl1 \
-    nano \
+    libglib2.0-0 \
+    libspatialindex-dev \
+    libxml2-dev \
+    libxslt-dev \
+    libffi-dev \
+    libssl-dev \
+    supervisor \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r requirements.txt
+
+# ============================
+# Stage 2 — Runtime
+# ============================
+FROM python:3.11-slim AS runtime
+
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Only runtime libs (no compilers)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libspatialindex-dev \
+    libxml2 \
+    libxslt1.1 \
+    libffi8 \
+    libssl3 \
     supervisor \
     && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies before copying source code to prevent cache busting
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir -r /app/requirements.txt
+# Copy Python env from builder
+COPY --from=builder /usr/local /usr/local
 
-# Copy only necessary application files (avoid copying unnecessary files)
+# Copy project files
 COPY . /app/
 
-# Copy the entrypoint script separately and ensure it has execution permissions
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
-# Set the entrypoint
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

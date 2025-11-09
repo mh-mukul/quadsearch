@@ -13,25 +13,27 @@ from src.utils.doc_processor import DoclingProcessor
 
 load_dotenv()
 
-QADRANT_URL = os.getenv("QDRANT_URL")
-QADRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "./data/artifacts/all-MiniLM-L6-v2")
+QDRANT_URL = os.getenv("QDRANT_URL")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+ARTIFACTS_DIR = os.getenv("ARTIFACTS_DIR", "./data/artifacts")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 RERANKER_MODEL = os.getenv(
-    "RERANKER_MODEL", "./data/artifacts/ms-marco-MiniLM-L-6-v2")
+    "RERANKER_MODEL", "ms-marco-MiniLM-L-6-v2")
 CHUNKER_MODEL = os.getenv(
-    "CHUNKER_MODEL", "./data/artifacts/all-MiniLM-L6-v2")
+    "CHUNKER_MODEL", "all-MiniLM-L6-v2")
 CHUNKER_MAX_TOKENS = int(os.getenv("CHUNKER_MAX_TOKENS", 512))
 DOCUMENT_DIR = os.getenv('DOCUMENT_DIR', 'documents')
 
 qdrant = QdrantStore(
-    client=QdrantClient(url=QADRANT_URL, api_key=QADRANT_API_KEY),
-    encoder=SentenceTransformer(EMBEDDING_MODEL),
-    reranker=CrossEncoder(RERANKER_MODEL)
+    client=QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY),
+    encoder=SentenceTransformer(os.path.join(ARTIFACTS_DIR, EMBEDDING_MODEL)),
+    reranker=CrossEncoder(os.path.join(ARTIFACTS_DIR, RERANKER_MODEL))
 )
 
 converter = DocumentConverter()
 chunker = HybridChunker(
-    tokenizer=AutoTokenizer.from_pretrained(CHUNKER_MODEL),
+    tokenizer=AutoTokenizer.from_pretrained(
+        os.path.join(ARTIFACTS_DIR, CHUNKER_MODEL)),
     max_tokens=CHUNKER_MAX_TOKENS,
     merge_peers=True  # Merge small adjacent chunks
 )

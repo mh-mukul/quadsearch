@@ -6,29 +6,30 @@ echo "Initializing Docker entrypoint..."
 # Create directories if not exist
 mkdir -p /app/data/artifacts /app/data/logs /app/data/logs/console /app/data/logs/celery
 
+# Load environment variables from .env if present
+if [ -f ".env" ]; then
+  echo "Loading environment variables from .env"
+  export $(grep -v '^#' .env | xargs)
+fi
+
 # -----------------------------------
 # Download models if they don’t exist
 # -----------------------------------
-if [ ! -d "/app/data/artifacts/all-MiniLM-L6-v2" ]; then
-  echo "Downloading SentenceTransformer model..."
-  huggingface-cli download sentence-transformers/all-MiniLM-L6-v2 --local-dir /app/data/artifacts/all-MiniLM-L6-v2
-else
-  echo "SentenceTransformer model already exists. Skipping download."
-fi
+echo "Downloading Embedding model..."
+hf download "sentence-transformers/$EMBEDDING_MODEL" --local-dir /app/data/artifacts/$EMBEDDING_MODEL
+echo "Download complete."
 
-if [ ! -d "/app/data/artifacts/ms-marco-MiniLM-L-6-v2" ]; then
-  echo "Downloading CrossEncoder model..."
-  huggingface-cli download cross-encoder/ms-marco-MiniLM-L-6-v2 --local-dir /app/data/artifacts/ms-marco-MiniLM-L-6-v2
-else
-  echo "CrossEncoder model already exists. Skipping download."
-fi
+echo "Downloading Reranker model..."
+hf download "cross-encoder/$RERANKER_MODEL" --local-dir /app/data/artifacts/$RERANKER_MODEL
+echo "Download complete."
 
-if [ ! -d "/app/data/artifacts/docling" ]; then
-  echo "Downloading Docling models..."
-  docling-tools models download -o /app/data/artifacts
-else
-  echo "Docling models already exist. Skipping download."
-fi
+echo "Downloading Chunker model..."
+hf download "sentence-transformers/$CHUNKER_MODEL" --local-dir /app/data/artifacts/$CHUNKER_MODEL
+echo "Download complete."
+
+echo "Downloading Docling models..."
+docling-tools models download -o /app/data/artifacts
+echo "Download complete."
 
 echo "Starting supervisord..."
 /usr/bin/supervisord -c /app/supervisord.conf
