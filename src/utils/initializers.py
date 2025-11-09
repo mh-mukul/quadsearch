@@ -2,11 +2,13 @@ import os
 from dotenv import load_dotenv
 
 from qdrant_client import QdrantClient
+from transformers import AutoTokenizer
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
-from transformers import AutoTokenizer
 from docling.chunking import HybridChunker
-from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions
 
 from src.utils.qdrant_store import QdrantStore
 from src.utils.doc_processor import DoclingProcessor
@@ -30,7 +32,18 @@ qdrant = QdrantStore(
     reranker=CrossEncoder(os.path.join(ARTIFACTS_DIR, RERANKER_MODEL))
 )
 
-converter = DocumentConverter()
+
+pipeline_options = PdfPipelineOptions(
+    do_ocr=True,
+    ocr_options=RapidOcrOptions(backend="onnxruntime")  # Use RapidOCR
+)
+converter = DocumentConverter(
+    format_options={
+        InputFormat.PDF: PdfFormatOption(
+            pipeline_options=pipeline_options,
+        )
+    }
+)
 chunker = HybridChunker(
     tokenizer=AutoTokenizer.from_pretrained(
         os.path.join(ARTIFACTS_DIR, CHUNKER_MODEL)),

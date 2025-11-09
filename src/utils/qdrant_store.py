@@ -1,6 +1,14 @@
 from uuid import uuid4
 from typing import List
-from qdrant_client import models, QdrantClient
+from qdrant_client import QdrantClient
+from qdrant_client.models import (
+    VectorParams,
+    Distance,
+    PointStruct,
+    Filter,
+    FieldCondition,
+    MatchValue,
+)
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from src.configs.logger import logger
@@ -30,9 +38,9 @@ class QdrantStore:
         """
         self.client.create_collection(
             collection_name=collection_name,
-            vectors_config=models.VectorParams(
+            vectors_config=VectorParams(
                 size=self.vector_size,
-                distance=models.Distance.COSINE,
+                distance=Distance.COSINE,
             ),
         )
 
@@ -53,7 +61,7 @@ class QdrantStore:
 
         # 3. Create points (this part is fast)
         points = [
-            models.PointStruct(
+            PointStruct(
                 id=uuid4().hex, vector=vector.tolist(), payload=doc)
             for doc, vector in zip(documents, vectors)
         ]
@@ -64,7 +72,15 @@ class QdrantStore:
             points=points,
         )
 
-    def search_documents(self, collection_name: str, query: str, limit: int = 25, rerank: bool = False, min_score: float = 0.0):
+    def search_documents(
+        self,
+        collection_name: str,
+        query: str,
+        limit: int = 25,
+        rerank: bool = False,
+        min_score: float = 0.0,
+        metadata_filter: dict = None
+    ) -> List[ResultsSchema]:
         """
         Search and optionally rerank results.
 
@@ -73,14 +89,23 @@ class QdrantStore:
         :param limit: Number of results to return.
         :param rerank: Whether to rerank results with a cross-encoder.
         :param min_score: Minimum score for results to be included.
+        :param metadata_filter: Optional metadata filter to apply.
         :return: List of (doc, score).
         """
         # Step 1: Retrieve candidates with vector search
         hits = self.client.query_points(
             collection_name=collection_name,
-            query=self.encoder.encode(query).tolist(),
+            query=self.encoder.encode(query, show_progress_bar=False).tolist(),
             limit=limit,
             score_threshold=min_score if min_score > 0.0 else None,
+            query_filter=Filter(
+                must=[
+                    FieldCondition(
+                        key=f"metadata.{key}",
+                        match=MatchValue(value=value)
+                    ) for key, value in (metadata_filter or {}).items()
+                ]
+            ) if metadata_filter else None
         )
 
         logger.info(f"Initial search results: {hits}")
@@ -112,7 +137,7 @@ class QdrantStore:
         # Prepare pairs for cross-encoder
         pairs = [(query, item.pageContent) for item in results]
         # Get relevance scores
-        relevance_score = self.reranker.predict(pairs)
+        relevance_score = self.reranker.predict(pairs, show_progress_bar=False)
 
         # Attach relevance score
         for item, score in zip(results, relevance_score):

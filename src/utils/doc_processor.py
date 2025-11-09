@@ -87,10 +87,7 @@ class DoclingProcessor:
             logger.info(f"   ✓ Generated {len(chunks)} chunks")
 
             chunks_info['chunks'] = [
-                {
-                    'id': uuid.uuid4().hex,
-                    'content': self.chunker.contextualize(chunk=chunk)
-                } for chunk in chunks
+                self.chunker.contextualize(chunk=chunk) for chunk in chunks
             ]
 
             return chunks_info

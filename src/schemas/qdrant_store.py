@@ -14,6 +14,8 @@ class SearchPayload(BaseModel):
         False, description="Whether to rerank results with a cross-encoder")
     min_score: float = Field(
         0.0, description="Minimum score threshold for results", ge=0.0, le=1.0)
+    metadata_filter: dict = Field(
+        None, description="Optional metadata filter to apply")
 
 
 class ResultsSchema(BaseModel):

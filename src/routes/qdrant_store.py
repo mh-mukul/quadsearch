@@ -20,7 +20,7 @@ router = APIRouter(prefix="", tags=["Qdrant Store"])
 
 
 @router.post("/create_collection")
-def collection_create(
+async def collection_create(
     request: Request,
     data: CollectionCreatePayload,
     _: None = Depends(get_api_key),
@@ -34,7 +34,7 @@ def collection_create(
 
 
 @router.post("/search")
-def document_search(
+async def document_search(
     request: Request,
     payload: SearchPayload,
     _: None = Depends(get_api_key),
@@ -45,7 +45,13 @@ def document_search(
 
     try:
         results = qdrant.search_documents(
-            payload.collection_name, query, limit=payload.limit, rerank=payload.rerank, min_score=payload.min_score)
+            collection_name=payload.collection_name,
+            query=query,
+            limit=payload.limit,
+            rerank=payload.rerank,
+            min_score=payload.min_score,
+            metadata_filter=payload.metadata_filter
+        )
         if not results:
             return response.success_response(200, "No results found.")
         return response.success_response(200, "Success", results)
@@ -55,7 +61,7 @@ def document_search(
 
 
 @router.post("/rerank")
-def document_rerank(
+async def document_rerank(
     request: Request,
     payload: RerankRequestPayload,
     _: None = Depends(get_api_key),
@@ -78,7 +84,7 @@ def document_rerank(
 
 
 @router.post("/process_doc")
-def process_doc(
+async def process_doc(
     request: Request,
     collection_name: str = Form(
         ..., description="Qdrant collection name to store document chunks."),
@@ -100,7 +106,7 @@ def process_doc(
 
         task = process_and_store_document.delay(
             file_path, collection_name, metadata=metadata_dict)
-        
+
         return response.success_response(
             202,
             "Document processing started.",
