@@ -31,5 +31,15 @@ echo "Downloading Docling models..."
 docling-tools models download -o /app/data/artifacts
 echo "Download complete."
 
+# -----------------------------------
+# Apply migrations
+# -----------------------------------
+echo "Applying database migrations..."
+alembic upgrade head
+echo "Migrations applied."
+
+# -----------------------------------
+# Start supervisord
+# -----------------------------------
 echo "Starting supervisord..."
 /usr/bin/supervisord -c /app/supervisord.conf

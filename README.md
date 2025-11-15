@@ -1,11 +1,12 @@
-# QuadSearch - Semantic Search Engine
+# QuadSearch - Document Processing & Semantic Search Engine
 
 ### Summary
 
-QuadSearch is a semantic search engine built using FastAPI and Qdrant. It provides a simple and efficient way to perform vector-based searches on large datasets. The application is designed to be easily extensible and customizable, allowing developers to build their own search applications on top of it.
+QuadSearch is a document processing, parsing & semantic search engine built using FastAPI, Docling and Qdrant. It provides a simple and efficient way to process documents and perform vector-based searches on large datasets. The application is designed to be easily extensible and customizable, allowing developers to build their own gen AI-powered applications on top of it.
 
 Key features:
 
+- Document processing and parsing using Docling
 - Vector search using Qdrant
 - Database integration with SQLAlchemy
 - Database migrations with Alembic
@@ -16,6 +17,7 @@ Key features:
 Technologies used:
 
 - FastAPI
+- Docling
 - Qdrant
 - SQLAlchemy
 - Alembic
@@ -59,9 +61,9 @@ Please refer to the official [Qdrant documentation](https://qdrant.tech/document
 
 ### Database Setup
 
-The application is configured to use SQLite by default. To use a different database, such as MySQL, you will need to update the following environment variables in the `.env` file:
+The application is configured to use SQLite by default. To use a different database, such as MySQL & PostgreSQL, you will need to update the following environment variables in the `.env` file:
 
-- `DB_TYPE`: Set to `mysql`.
+- `DB_TYPE`: Set to `mysql` or `postgresql`.
 - `DB_HOST`: The hostname or IP address of the database server.
 - `DB_PORT`: The port number of the database server.
 - `DB_NAME`: The name of the database.
@@ -74,11 +76,20 @@ After configuring the database connection, you will need to run the database mig
 alembic upgrade head
 ```
 
+### Important Environment Variables
+- `ARTIFACTS_DIR`: Directory for storing Docling artifacts & necessary models. When running the application for the first time, these artifacts will be downloaded here.
+- `EMBEDDING_MODEL`: The embedding model to be used for generating vector representations of documents and queries. Default is `all-MiniLM-L6-v2` from SentenceTransformers.
+- `RERANKER_MODEL`: The reranker model to be used for re-ranking search results. Default is `ms-marco-MiniLM-L-6-v2` from Cross-Encoder.
+- `CHUNKER_MODEL`: The chunker model to be used for chunking documents. Default is `all-MiniLM-L6-v2` from SentenceTransformers.
+- `CHUNKER_MAX_TOKENS`: Maximum number of tokens per chunk. Default is `512`.
+
+
 ### API Endpoints
 
 The following API endpoints are available:
 
 - `/api/v1/create_collection` (POST): Creates a new index in the DB.
+- `/api/v1/process_doc` (POST): Processes and parses a document.
 - `/api/v1/add_document` (POST): Inserts document rows in a collection.
 - `/api/v1/search` (POST): Searches for documents in a collection.
 
