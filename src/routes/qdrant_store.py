@@ -9,7 +9,7 @@ from src.configs.logger import logger
 from src.utils.auth import get_api_key
 from src.utils.initializers import qdrant
 from src.utils.helper import ResponseHelper
-from src.celery_tasks import process_and_store_document
+from src.celery_tasks import process_and_store_document, process_and_store_content
 from src.schemas.qdrant_store import CollectionCreatePayload, SearchPayload, RerankRequestPayload
 
 load_dotenv()
@@ -119,3 +119,52 @@ async def process_doc(
     except Exception as e:
         logger.error(f"Failed to start document processing task: {e}")
         return response.error_response(500, "Failed to start document processing.", str(e))
+
+
+@router.post("/process_content")
+async def process_content(
+    request: Request,
+    collection_name: str = Form(
+        ..., description="Qdrant collection name to store content chunks."),
+    content: str = Form(..., description="Text content to process"),
+    content_type: str = Form(
+        "text", description="Content type/format, e.g., text, qna"),
+    metadata: str = Form(
+        None, description="Optional metadata for the content in JSON format"),
+    _: None = Depends(get_api_key),
+):
+    try:
+        metadata_dict = {}
+        if metadata:
+            metadata_dict = json.loads(metadata)
+
+        if content_type not in ["text", "qna"]:
+            return response.error_response(400, "Unsupported content type.")
+
+        if content_type == "text":
+            # Convert plain text to markdown format for better chunking
+            title = metadata_dict.get("title", "Document")
+            filename = uuid4().hex + f"_{title}.md"
+            file_path = f"{DOCUMENT_DIR}/uploads/{filename}"
+            os.makedirs(Path(file_path).parent, exist_ok=True)
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            task = process_and_store_document.delay(
+                file_path, collection_name, metadata=metadata_dict)
+        else:
+            # TODO: Handle other content types like QnA
+            task = process_and_store_content.delay(
+                content, collection_name, metadata=metadata_dict)
+
+        return response.success_response(
+            202,
+            "Content processing started.",
+            {
+                "task_id": task.id,
+                "status": "PENDING"
+            },
+        )
+    except Exception as e:
+        logger.error(f"Failed to start content processing task: {e}")
+        return response.error_response(500, "Failed to start content processing.", str(e))

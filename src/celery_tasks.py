@@ -4,7 +4,8 @@ from src.models.tasks import Tasks
 from celery_config import celery_app
 from src.configs.logger import logger
 from src.configs.database import SessionLocal
-from src.utils.initializers import qdrant, doc_processor
+from src.utils.initializers import qdrant, doc_processor, converter
+from docling.datamodel.base_models import InputFormat
 
 
 @celery_app.task(name="process_and_store_document", bind=True)
@@ -66,5 +67,58 @@ def process_and_store_document(self, file_path: str, collection_name: str, metad
         task.completed_at = datetime.now(tz=timezone.utc)
         db.commit()
         return f"Error in processing and storing document: {e}"
+    finally:
+        db.close()
+
+
+@celery_app.task(name="process_and_store_content", bind=True)
+def process_and_store_content(self, content: str, collection_name: str, metadata: dict = None):
+    """
+    Celery task to process text content and store its chunks in Qdrant.
+
+    :param self: Task instance (automatically injected by Celery)
+    :param content: Text content to process.
+    :param collection_name: Name of the Qdrant collection to store chunks.
+    :param metadata: Optional metadata for the content.
+    """
+    db = SessionLocal()
+    try:
+        # Create task record
+        task = Tasks(task_id=self.request.id, status="PROCESSING")
+        db.add(task)
+        db.commit()
+        # Convert content to Docling document
+        dl_doc = converter.convert_string(content=content, format=InputFormat.MD).document
+        # Chunk content
+        chunk_info = doc_processor.chunker.chunk(dl_doc=dl_doc)
+        chunks = chunk_info['chunks']
+
+        # Prepare documents for Qdrant
+        documents = []
+        for idx, chunk in enumerate(chunks):
+            documents.append({
+                'content': chunk,
+                'metadata': {
+                    'chunk_index': idx,
+                    **(metadata or {})
+                }
+            })
+
+        # Add documents to Qdrant
+        qdrant.add_documents(collection_name, documents)
+
+        # Update task status
+        task.status = "COMPLETED"
+        task.completed_at = datetime.now(tz=timezone.utc)
+        db.commit()
+
+        return "Content processed and stored successfully."
+    except Exception as e:
+        logger.error(f"Error in processing and storing content: {e}")
+        # Update task status for error
+        task.status = "FAILED"
+        task.completed_at = datetime.now(tz=timezone.utc)
+        db.commit()
+        return f"Error in processing and storing content: {e}"
     finally:
         db.close()
