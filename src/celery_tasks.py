@@ -4,8 +4,7 @@ from src.models.tasks import Tasks
 from celery_config import celery_app
 from src.configs.logger import logger
 from src.configs.database import SessionLocal
-from src.utils.initializers import qdrant, doc_processor, converter
-from docling.datamodel.base_models import InputFormat
+from src.utils.initializers import qdrant, doc_processor
 
 
 @celery_app.task(name="process_and_store_document", bind=True)
@@ -40,7 +39,6 @@ def process_and_store_document(self, file_path: str, collection_name: str, metad
                     'content': chunk,
                     'metadata': {
                         'source_file': doc_info['file'],
-                        'chunk_index': idx,
                         **(metadata or {})
                     }
                 })
@@ -87,22 +85,14 @@ def process_and_store_content(self, content: str, collection_name: str, metadata
         task = Tasks(task_id=self.request.id, status="PROCESSING")
         db.add(task)
         db.commit()
-        # Convert content to Docling document
-        dl_doc = converter.convert_string(content=content, format=InputFormat.MD).document
-        # Chunk content
-        chunk_info = doc_processor.chunker.chunk(dl_doc=dl_doc)
-        chunks = chunk_info['chunks']
 
         # Prepare documents for Qdrant
-        documents = []
-        for idx, chunk in enumerate(chunks):
-            documents.append({
-                'content': chunk,
-                'metadata': {
-                    'chunk_index': idx,
-                    **(metadata or {})
-                }
-            })
+        documents = [{
+            'content': content,
+            'metadata': {
+                **(metadata or {})
+            }
+        }]
 
         # Add documents to Qdrant
         qdrant.add_documents(collection_name, documents)
