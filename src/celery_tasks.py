@@ -1,3 +1,6 @@
+import os
+import requests
+from dotenv import load_dotenv
 from datetime import datetime, timezone
 
 from src.models.tasks import Tasks
@@ -5,6 +8,10 @@ from celery_config import celery_app
 from src.configs.logger import logger
 from src.configs.database import SessionLocal
 from src.utils.initializers import qdrant, doc_processor
+
+load_dotenv()
+AGENTIQ_BASE_URL = os.getenv("AGENTIQ_BASE_URL")
+AGENTIQ_API_KEY = os.getenv("AGENTIQ_API_KEY")
 
 
 @celery_app.task(name="process_and_store_document", bind=True)
@@ -50,6 +57,9 @@ def process_and_store_document(self, file_path: str, collection_name: str, metad
             task.status = "COMPLETED"
             task.completed_at = datetime.now(tz=timezone.utc)
             db.commit()
+            output_file = doc_info['output_file']
+            content = open(output_file, 'r').read()
+            update_agentiq_source(metadata['source_id'], "processed", content)
 
             return f"Document '{doc_info['file']}' processed and stored successfully."
         else:
@@ -57,6 +67,7 @@ def process_and_store_document(self, file_path: str, collection_name: str, metad
             task.status = "FAILED"
             task.completed_at = datetime.now(tz=timezone.utc)
             db.commit()
+            update_agentiq_source(metadata['source_id'], "failed")
             return f"Document processing failed: {doc_info}"
     except Exception as e:
         logger.error(f"Error in processing and storing document: {e}")
@@ -64,6 +75,7 @@ def process_and_store_document(self, file_path: str, collection_name: str, metad
         task.status = "FAILED"
         task.completed_at = datetime.now(tz=timezone.utc)
         db.commit()
+        update_agentiq_source(metadata['source_id'], "failed")
         return f"Error in processing and storing document: {e}"
     finally:
         db.close()
@@ -101,7 +113,7 @@ def process_and_store_content(self, content: str, collection_name: str, metadata
         task.status = "COMPLETED"
         task.completed_at = datetime.now(tz=timezone.utc)
         db.commit()
-
+        update_agentiq_source(metadata['source_id'], "processed", content)
         return "Content processed and stored successfully."
     except Exception as e:
         logger.error(f"Error in processing and storing content: {e}")
@@ -109,6 +121,20 @@ def process_and_store_content(self, content: str, collection_name: str, metadata
         task.status = "FAILED"
         task.completed_at = datetime.now(tz=timezone.utc)
         db.commit()
+        update_agentiq_source(metadata['source_id'], "failed")
         return f"Error in processing and storing content: {e}"
     finally:
         db.close()
+
+
+def update_agentiq_source(source_id: str, status: str, content: str = None):
+    try:
+        response = requests.post(f"{AGENTIQ_BASE_URL}/api/v1/sources/update-status", headers={
+                                 "Authorization": f"Bearer {AGENTIQ_API_KEY}"}, json={"source_uid": source_id, "status": status, "content": content})
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+    except Exception as e:
+        logger.error(f"Error in updating agentiq source: {e}")
+        return False
